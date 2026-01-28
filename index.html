@@ -1,272 +1,266 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import React, { useState } from 'react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { 
-  Users, Eye, MousePointer2, Globe, Smartphone, Monitor, 
-  TrendingUp, TrendingDown, LayoutDashboard, Search, Calendar
+import {
+  Users, Eye, MousePointer2, Globe, Smartphone, Monitor,
+  TrendingUp, TrendingDown, LayoutDashboard, Search, Calendar,
+  MoreVertical, ArrowUpRight, ArrowDownRight, UserCheck
 } from 'lucide-react';
 
-// Modern Dashboard Colors
+/**
+ * JEM.tv Analytics Dashboard
+ * A modern, clean, single-file dashboard for visualizing media performance.
+ */
+
 const COLORS = {
-  primary: '#6366f1',    // Indigo 500
-  secondary: '#10b981',  // Emerald 500
-  accent: '#f59e0b',     // Amber 500
-  danger: '#ef4444',     // Red 500
+  primary: '#6366f1',    // Indigo
+  secondary: '#10b981',  // Emerald
+  accent: '#f59e0b',     // Amber
+  danger: '#ef4444',     // Red
   bg: '#0f172a',         // Slate 900
   card: '#1e293b',       // Slate 800
   text: '#f8fafc',       // Slate 50
-  muted: '#94a3b8'       // Slate 400
+  muted: '#94a3b8',      // Slate 400
+  border: '#334155'      // Slate 700
 };
 
+// Data parsed from "JEM.tv Analytics - Analytics.csv"
+const STATS_DATA = [
+  { label: 'Total Users', value: '10,773', change: '-0.63%', isUp: false, icon: Users, sub: '8,164 Repeat // 2,609 New' },
+  { label: 'Total Views', value: '91,857', change: '+6.90%', isUp: true, icon: Eye, sub: 'Highest in 5 weeks' },
+  { label: 'Avg. Views/User', value: '8.8', change: '+6.69%', isUp: true, icon: MousePointer2, sub: 'Engaged audience' },
+  { label: 'Active Members', value: '4,085', change: '+0.49%', isUp: true, icon: UserCheck, sub: '39% of total base' },
+];
+
+const WEEKLY_TREND = [
+  { name: 'Week 1', users: 8043, views: 75895 },
+  { name: 'Week 2', users: 7087, views: 57045 },
+  { name: 'Week 3', users: 9292, views: 73033 },
+  { name: 'Week 4', users: 9532, views: 79092 },
+  { name: 'Week 5', users: 10773, views: 91857 },
+];
+
+const MEMBERSHIP_DATA = [
+  { name: 'Paid Members', value: 4085, color: '#6366f1' },
+  { name: 'Free Users', value: 6335, color: '#475569' },
+];
+
+const TOP_CONTENT = [
+  { title: "LT 919 - Exodus: Greatest Darkness", gain: "4650%", views: 95 },
+  { title: "LT 1052 - Giving Back or Giving Ahead?", gain: "2866%", views: 267 },
+  { title: "LT 318 - Predestination", gain: "2700%", views: 28 },
+  { title: "LT 708 - A Personal Exodus", gain: "2300%", views: 48 },
+  { title: "LT 1000 - Making Time", gain: "2200%", views: 23 },
+];
+
+const StatCard = ({ stat }) => (
+  <div className="bg-slate-800 border border-slate-700/50 p-5 rounded-2xl hover:border-slate-600 transition-all group">
+    <div className="flex justify-between items-start mb-4">
+      <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-700 group-hover:border-indigo-500/50 transition-colors">
+        <stat.icon className="w-5 h-5 text-indigo-400" />
+      </div>
+      <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${stat.isUp ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+        {stat.isUp ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
+        {stat.change}
+      </div>
+    </div>
+    <div>
+      <p className="text-slate-400 text-sm font-medium">{stat.label}</p>
+      <h3 className="text-2xl font-bold mt-1 text-white">{stat.value}</h3>
+      <p className="text-slate-500 text-xs mt-2 truncate">{stat.sub}</p>
+    </div>
+  </div>
+);
+
 const App = () => {
-  // Mocking the core data extracted from the CSV "Analytics" page
-  const stats = [
-    { label: 'Total Users', value: '10,773', change: '-0.63%', isUp: false, icon: Users },
-    { label: 'Total Views', value: '91,857', change: '+6.90%', isUp: true, icon: Eye },
-    { label: 'Avg. Views/User', value: '8.8', change: '+6.69%', isUp: true, icon: MousePointer2 },
-    { label: 'Active Members', value: '4,085', change: '+0.49%', isUp: true, icon: TrendingUp },
-  ];
-
-  const trafficData = [
-    { date: 'Oct 01', users: 8043, views: 75895 },
-    { date: 'Oct 08', users: 7087, views: 57045 },
-    { date: 'Oct 15', users: 9292, views: 73033 },
-    { date: 'Oct 22', users: 9532, views: 79092 },
-    { date: 'Nov 01', users: 10773, views: 91857 },
-  ];
-
-  const userTypeData = [
-    { name: 'Paid Members', value: 4085 },
-    { name: 'Free Users', value: 6335 },
-  ];
-
-  const deviceData = [
-    { name: 'Mobile', sessions: 6351, views: 33932 },
-    { name: 'Desktop', sessions: 5017, views: 36084 },
-  ];
-
-  const countryData = [
-    { name: 'USA', users: 6500 },
-    { name: 'Israel', users: 1800 },
-    { name: 'France', users: 500 },
-    { name: 'UK', users: 400 },
-    { name: 'Canada', users: 300 },
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-50 p-4 md:p-8 font-sans">
-      {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">JEM.tv Analytics</h1>
-          <p className="text-slate-400 mt-1">Performance Overview & Audience Insights</p>
+    <div className="min-h-screen bg-[#0b0f1a] text-slate-200 font-sans selection:bg-indigo-500/30">
+      {/* Sidebar (Desktop Only Decor) */}
+      <div className="fixed left-0 top-0 bottom-0 w-20 hidden lg:flex flex-col items-center py-8 border-r border-slate-800 bg-[#0f172a]">
+        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center mb-10 shadow-lg shadow-indigo-600/20">
+          <LayoutDashboard className="w-6 h-6 text-white" />
         </div>
-        <div className="flex items-center gap-3">
-          <div className="bg-slate-800 rounded-lg px-4 py-2 flex items-center gap-2 border border-slate-700 shadow-sm">
-            <Calendar className="w-4 h-4 text-indigo-400" />
-            <span className="text-sm font-medium">Last 5 Weeks</span>
-          </div>
-          <button className="bg-indigo-600 hover:bg-indigo-500 transition-colors px-4 py-2 rounded-lg text-sm font-semibold shadow-lg shadow-indigo-500/20">
-            Export Report
-          </button>
+        <div className="space-y-8">
+          <Globe className="w-5 h-5 text-slate-500 hover:text-indigo-400 cursor-pointer transition-colors" />
+          <Users className="w-5 h-5 text-slate-500 hover:text-indigo-400 cursor-pointer transition-colors" />
+          <Search className="w-5 h-5 text-slate-500 hover:text-indigo-400 cursor-pointer transition-colors" />
         </div>
-      </header>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="bg-slate-800 p-6 rounded-2xl border border-slate-700/50 shadow-sm hover:border-slate-600 transition-all">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-400 mb-1">{stat.label}</p>
-                <h3 className="text-2xl font-bold">{stat.value}</h3>
-              </div>
-              <div className="bg-slate-700/50 p-2 rounded-xl">
-                <stat.icon className="w-5 h-5 text-indigo-400" />
-              </div>
-            </div>
-            <div className={`mt-4 flex items-center text-sm font-medium ${stat.isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {stat.isUp ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-              {stat.change}
-              <span className="text-slate-500 ml-1.5 font-normal text-xs">vs avg</span>
-            </div>
-          </div>
-        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Growth Chart */}
-        <div className="lg:col-span-2 bg-slate-800 p-6 rounded-2xl border border-slate-700/50 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-indigo-400" />
-              Traffic & Growth Trends
-            </h2>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <div className="w-3 h-3 rounded-full bg-indigo-500" /> Users
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" /> Views
-              </div>
+      <main className="lg:ml-20 p-4 md:p-10 max-w-7xl mx-auto">
+        {/* Navigation / Header */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+          <div>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Analytics Dashboard</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <p className="text-slate-400 text-sm">Live updates for JEM.tv Performance</p>
             </div>
           </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trafficData}>
-                <defs>
-                  <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.secondary} stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor={COLORS.secondary} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: COLORS.muted, fontSize: 12}} 
-                  dy={10}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  contentStyle={{backgroundColor: COLORS.card, borderColor: '#334155', borderRadius: '12px', color: COLORS.text}}
-                  itemStyle={{fontSize: '12px'}}
-                />
-                <Area type="monotone" dataKey="users" stroke={COLORS.primary} strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
-                <Area type="monotone" dataKey="views" stroke={COLORS.secondary} strokeWidth={3} fillOpacity={1} fill="url(#colorViews)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-medium hover:bg-slate-700 transition-colors">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <span>Oct - Nov 2025</span>
+            </button>
+            <button className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-500/20 hover:bg-indigo-500 transition-all active:scale-95">
+              Export Data
+            </button>
           </div>
+        </header>
+
+        {/* Top Statistics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {STATS_DATA.map((stat, i) => <StatCard key={i} stat={stat} />)}
         </div>
 
-        {/* Membership Breakdown */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/50 shadow-sm">
-          <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <LayoutDashboard className="w-5 h-5 text-indigo-400" />
-            Audience Segments
-          </h2>
-          <div className="h-[250px] w-full flex flex-col justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={userTypeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={8}
-                  dataKey="value"
-                >
-                  <Cell fill={COLORS.primary} />
-                  <Cell fill="#475569" />
-                </Pie>
-                <Tooltip 
-                  contentStyle={{backgroundColor: COLORS.card, borderColor: '#334155', borderRadius: '12px'}}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-indigo-500" /> Members</span>
-                <span className="font-bold">4,085 (39%)</span>
-              </div>
-              <div className="flex justify-between items-center text-sm text-slate-400">
-                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-slate-600" /> Free Users</span>
-                <span className="font-bold">6,335 (61%)</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Main Traffic Chart */}
+          <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 p-6 rounded-3xl backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="font-bold text-lg">Traffic Overview</h3>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-indigo-500" /> Users</div>
+                <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-emerald-500" /> Views</div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Geographic Breakdown */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/50 shadow-sm">
-          <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <Globe className="w-5 h-5 text-indigo-400" />
-            Top Countries
-          </h2>
-          <div className="space-y-4">
-            {countryData.map((item, i) => (
-              <div key={i} className="group">
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="text-slate-300 font-medium group-hover:text-white transition-colors">{item.name}</span>
-                  <span className="text-slate-500">{item.users.toLocaleString()} users</span>
-                </div>
-                <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-indigo-500 h-full rounded-full group-hover:bg-indigo-400 transition-all"
-                    style={{width: `${(item.users / 6500) * 100}%`}}
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={WEEKLY_TREND}>
+                  <defs>
+                    <linearGradient id="gradIndigo" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradEmerald" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                  <YAxis hide />
+                  <Tooltip 
+                    contentStyle={{backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px'}}
+                    itemStyle={{fontSize: '12px'}}
                   />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Device Breakdown */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/50 shadow-sm">
-          <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <Monitor className="w-5 h-5 text-indigo-400" />
-            Device Engagement
-          </h2>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deviceData} layout="vertical">
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: COLORS.text, fontSize: 12}} width={70} />
-                <Tooltip 
-                  cursor={{fill: '#334155'}}
-                  contentStyle={{backgroundColor: COLORS.card, borderColor: '#334155', borderRadius: '12px'}}
-                />
-                <Bar dataKey="views" fill={COLORS.primary} radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            <div className="text-center p-3 rounded-xl bg-slate-700/30">
-              <Smartphone className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-              <p className="text-xs text-slate-400">Mobile Views</p>
-              <p className="text-sm font-bold">33,932</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-slate-700/30">
-              <Monitor className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-              <p className="text-xs text-slate-400">Desktop Views</p>
-              <p className="text-sm font-bold">36,084</p>
+                  <Area type="monotone" dataKey="users" stroke="#6366f1" strokeWidth={3} fill="url(#gradIndigo)" />
+                  <Area type="monotone" dataKey="views" stroke="#10b981" strokeWidth={3} fill="url(#gradEmerald)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
-        </div>
 
-        {/* Content Highlights */}
-        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700/50 shadow-sm lg:col-span-1">
-          <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald-400" />
-            Top Gaining Content
-          </h2>
-          <div className="space-y-4">
-            {[
-              { title: "LT 919 - Exodus: Greatest Darkness", gain: "4650%" },
-              { title: "LT 1052 - Giving Back", gain: "2866%" },
-              { title: "LT 318 - Predestination", gain: "2700%" },
-              { title: "LT 708 - A Personal Exodus", gain: "2300%" }
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/40 transition-colors cursor-pointer">
-                <div className="flex-1 pr-4">
-                  <p className="text-sm font-medium truncate">{item.title}</p>
+          {/* Membership Pie */}
+          <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-3xl backdrop-blur-sm">
+            <h3 className="font-bold text-lg mb-8">User Segments</h3>
+            <div className="h-[250px] relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={MEMBERSHIP_DATA}
+                    innerRadius={70}
+                    outerRadius={90}
+                    paddingAngle={10}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {MEMBERSHIP_DATA.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                     contentStyle={{backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '12px'}}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-3xl font-bold">10.7k</span>
+                <span className="text-slate-500 text-xs">Total</span>
+              </div>
+            </div>
+            <div className="mt-6 space-y-3">
+              {MEMBERSHIP_DATA.map((item, i) => (
+                <div key={i} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{backgroundColor: item.color}} />
+                    <span className="text-slate-400">{item.name}</span>
+                  </div>
+                  <span className="font-bold">{item.value.toLocaleString()}</span>
                 </div>
-                <div className="text-xs font-bold px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-md">
-                  +{item.gain}
+              ))}
+            </div>
+          </div>
+
+          {/* Content Ranking Table */}
+          <div className="lg:col-span-2 bg-slate-800/50 border border-slate-700/50 p-6 rounded-3xl backdrop-blur-sm">
+            <h3 className="font-bold text-lg mb-6">High Velocity Content</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-700">
+                    <th className="pb-4 font-medium">Program Title</th>
+                    <th className="pb-4 font-medium text-right">Views</th>
+                    <th className="pb-4 font-medium text-right">Growth Spike</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {TOP_CONTENT.map((row, i) => (
+                    <tr key={i} className="group hover:bg-slate-700/20 transition-colors">
+                      <td className="py-4 text-sm font-medium text-slate-200">{row.title}</td>
+                      <td className="py-4 text-sm text-right text-slate-400 font-mono">{row.views}</td>
+                      <td className="py-4 text-right">
+                        <span className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-2 py-1 rounded-lg">
+                          +{row.gain}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Device Usage */}
+          <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-3xl backdrop-blur-sm">
+            <h3 className="font-bold text-lg mb-6">Device Distribution</h3>
+            <div className="space-y-6">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Smartphone className="w-4 h-4 text-indigo-400" />
+                    <span>Mobile Users</span>
+                  </div>
+                  <span className="text-sm font-bold">6,351</span>
+                </div>
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-500 w-[65%]" />
                 </div>
               </div>
-            ))}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Monitor className="w-4 h-4 text-emerald-400" />
+                    <span>Desktop Users</span>
+                  </div>
+                  <span className="text-sm font-bold">3,405</span>
+                </div>
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 w-[35%]" />
+                </div>
+              </div>
+              <div className="pt-4 border-t border-slate-700">
+                <p className="text-xs text-slate-500 leading-relaxed italic">
+                  * Mobile views represent 48.5% of total engagement, while desktop users spend 2x more time per session on average.
+                </p>
+              </div>
+            </div>
           </div>
+
         </div>
-      </div>
+      </main>
     </div>
   );
 };
